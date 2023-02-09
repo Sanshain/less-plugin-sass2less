@@ -1,23 +1,27 @@
+//@ts-check
+
 import { createFilter } from '@rollup/pluginutils';
-
-
 import MagicString from 'magic-string';
 import prettier from "prettier";
 
 
 /**
+ * typedef {Object<string, object>} Packages
+ * typedef {{[k: string] : object} & Object<string, object>} Packages
+ * @typedef {{[k: string] : object}} Packages
+ * @typedef {{externalPackages: Packages, value: string}} MacrosDetails
  * 
  * @param {{
  *      include?: string,
  *      exclude?: string,
- *      macroses?: {[k: string]: string},
+ *      macroses?: {[k: string]: string | MacrosDetails},
  *      prettify?: boolean,
  *      comments?: false,
- *      warn?: (warn) => void
+ *      externalPackages?: Packages
  * }} options 
- * @returns 
+ * @returns {{name: string, transform: Function}}
  */
-export function requireStaticLinking(options = {}) {
+export function calculableMacros(options = {}) {
 
     const filter = createFilter(options.include, options.exclude);
     if (!options.macroses) {
@@ -29,17 +33,10 @@ export function requireStaticLinking(options = {}) {
         console.warn('Comments field is working only in combination with prettify field in true')
     }
 
+    options.externalPackages = options.externalPackages || {}
+
     return {
         name: 'rollup-plugin-macros-calculate',
-        options(options) {
-            console.log(8888888888);
-            this.warn = () => {
-                console.log(8888888888);
-            }
-            console.log('this');
-            return null;
-        },
-        warn: () => { console.log(889); },
         /**
          * 
          * @param {string} code 
@@ -51,8 +48,8 @@ export function requireStaticLinking(options = {}) {
 
             if (!filter(file) || !options.macroses) return;
 
+            let externalPackages = options.externalPackages;
             let source = new MagicString(code)
-            console.log(this);
 
             //@ts-ignore
             source.replaceAll(/\/\*\* MACRO `([\w,_ \(\)\="']+)` \*\/([\s\S]+)\/\*\* END_MACRO \*\//g, function (block, names, content) {
@@ -60,14 +57,50 @@ export function requireStaticLinking(options = {}) {
 
                 names.split(',').map(w => w.trim()).forEach(macro => {
                     if (options.macroses[macro] !== undefined) {
-                        content = content.replace(new RegExp(macro.replace(/([\(\)])/g, '\\$1')), options.macroses[macro] ? '(' + options.macroses[macro] + ')' : '')
+                        if (typeof options.macroses[macro] === 'string') {
+                            content = content.replace(new RegExp(macro.replace(/([\(\)])/g, '\\$1')), options.macroses[macro] ? '(' + options.macroses[macro] + ')' : '')
+                        }
+                        else if (typeof options.macroses[macro] === 'object' && typeof options.macroses[macro]['value'] === 'string') {
+
+                            /**
+                             * @type {MacrosDetails}
+                             */
+                            let macrosOptions = options.macroses[macro]['value'];
+                            content = content.replace(new RegExp(macro.replace(/([\(\)])/g, '\\$1')), macrosOptions.value ? '(' + macrosOptions.value + ')' : '');
+
+                            externalPackages = { externalPackages, ...macrosOptions.externalPackages }
+                        }
+                        else {
+                            throw new Error(`Error: wrong macro "${macro}" value`)
+                        }
+                    }
+                    else {
+                        console.warn(`Undefined macro "${macro}" in ${file}`);
                     }
                 });
+
+                const commonjsPackages = Object.entries(externalPackages).map(function ([key, value], i) {
+                    /**
+                     * @type {[string, {default: object}]}
+                     */
+                    let r = [
+                        key + '__default',
+                        {
+                            default: value
+                        }
+                    ];
+                    return r;
+                }).reduce((acc, [k, v]) => (acc[k] = v, acc), {})
+
+                // let eval2 = new Function(`{file, path, fs, fs__default}`, `return eval((() => {${content}})())`)
+                let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval((() => {${content}})())`)
+                // var eval2 = eval.bind(globalThis, `(() => {${content}})()`);
 
                 /**
                  * @type {Array<string>}
                  */
-                let r = eval(`(() => {${content}})()`);
+                let r = eval2({ file, ...externalPackages, ...commonjsPackages });
+                // let r = eval()`eval((() => {${content}})())`)
 
                 return 'return [\n' + r.toString() + ']'
             })
