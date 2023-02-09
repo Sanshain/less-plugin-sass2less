@@ -10,9 +10,11 @@ import astMacros from "rollup-plugin-ast-macros";
 
 import fs from "fs";
 import path from 'path';
+import { calculableMacros } from './rollup.plugin.macros.js';
 
-import { calculableMacros } from './rollup.plugin.macros';
-
+const packagespath = 'lib/replacements'
+let filenames = fs.readdirSync(path.join(process.cwd(), packagespath))
+console.log(filenames);
 
 
 
@@ -34,40 +36,46 @@ const buildOptions =  {
     },
     plugins: [
         // astMacros(),
-        calculableMacros({
-            prettify: true,
-            comments: false,
-            externalPackages: {path, fs},            
-            macroses: {
-                import: (function (_path) {
-                    let code = fs.readFileSync(_path).toString()
-                    console.log(_path);
-                    // try {
-                    //     var obj = eval(code)
-                    // }
-                    // catch (er){
+        // calculableMacros({
+        //     prettify: true,
+        //     comments: false,
+        //     externalPackages: {path, fs},            
+        //     macroses: {
+        //         require: (function (_path) {
+        //             let code = fs.readFileSync(_path).toString()
+        //             console.log(_path);
+        //             // try {
+        //             //     var obj = eval(code)
+        //             // }
+        //             // catch (er){
                     
-                    // let esCode = `export default (function (_, $, module) {\n\n${code}\n\nreturn module.exports\n})()`
+        //             // let esCode = `export default (function (_, $, module) {\n\n${code}\n\nreturn module.exports\n})()`
 
-                    let flatCode = code.replace('module.exports = ', '')
-                    // console.log(flatCode);
-                    let hasCLosingComma = flatCode.trim().slice(-1) === ';'
-                    if (hasCLosingComma) {
-                        flatCode = flatCode.trim().slice(0, -1)
-                    }
-                    // var obj = eval('(' + flatCode + ')');
+        //             let flatCode = code.replace('module.exports = ', '')
+        //             // console.log(flatCode);
+        //             let hasCLosingComma = flatCode.trim().slice(-1) === ';'
+        //             if (hasCLosingComma) {
+        //                 flatCode = flatCode.trim().slice(0, -1)
+        //             }
+        //             // var obj = eval('(' + flatCode + ')');
                     
-                    // }
-                    return flatCode
-                }).toString(),
-                __dirname: '`${path.dirname(path.relative(process.cwd(), file))}`',
-                "let fs = require('fs')": ''
-            }
-        }),
+        //             // }
+        //             return flatCode
+        //         }).toString(),
+        //         __dirname: '`${path.dirname(path.relative(process.cwd(), file))}`',
+        //         "let fs = require('fs')": ''
+        //     }
+        // }),
         resolve({
             browser: true
         }),
-        commonjs(),
+        commonjs({
+            // ignoreDynamicRequires: true
+
+            dynamicRequireTargets: [`${packagespath}/*.js`],
+            // dynamicRequireTargets: filenames,
+            // dynamicRequireRoot: path.join(process.cwd(), packagespath)
+        }),
         // typescript({
         //     // module: 'CommonJS', 
         //     // tsconfig: false, 

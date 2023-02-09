@@ -1,188 +1,483 @@
-var toLESS = (function () {
+var toLESS = (function (require$$0) {
   'use strict';
 
-  let sassToLess = function () {};
+  var _extend;
+  var hasRequired_extend;
 
-  let replacements = function () {
-    let results = (function () {
-      return [
-        // TODO: mimic LESS's &:extend(x all)
-        {
-          pattern: /@extend\s\.([a-zA-Z-_]*)/gi,
-          replacement: "&:extend(.$1)",
-          order: 2,
-        },
-        {
-          pattern: /@for\s([\w$]+)\sfrom\s([\w$]+)\s(through|to)\s(.*)\s\{((?:[^}{]+|\{(?:[^}{]+|\{[^}{]*\})*\})*)\}/gi,
-          replacement: function (match, iterator, initial, through, to, body) {
-            let operator = through === "through" ? "<=" : "<";
-            return (
-              `.for(${iterator}: ${initial}) when (${iterator} ${operator} ${to}) {` +
-              `${body.replace(new RegExp("(?:#{)?" + iterator + "}?", "gi"), "@{" + iterator + "}")}` +
-              `  .for((${iterator} + 1));
+  function require_extend () {
+  	if (hasRequired_extend) return _extend;
+  	hasRequired_extend = 1;
+  	// TODO: mimic LESS's &:extend(x all)
+  	_extend = {
+  	  pattern: /@extend\s\.([a-zA-Z-_]*)/gi,
+  	  replacement: '&:extend(.$1)',
+  	  order: 2
+  	};
+  	return _extend;
+  }
+
+  var _for;
+  var hasRequired_for;
+
+  function require_for () {
+  	if (hasRequired_for) return _for;
+  	hasRequired_for = 1;
+  	_for = {
+  	  pattern: /@for\s([\w$]+)\sfrom\s([\w$]+)\s(through|to)\s(.*)\s\{((?:[^}{]+|\{(?:[^}{]+|\{[^}{]*\})*\})*)\}/gi,
+  	  replacement: function(match, iterator, initial, through, to, body) {
+  	    let operator = through === 'through' ? '<=' : '<';
+  	    return `.for(${iterator}: ${initial}) when (${iterator} ${operator} ${to}) {` +
+  	      `${body.replace(new RegExp('(?:\#{)?' + iterator + '}?', 'gi'), '@{' + iterator + '}')}` +
+  	`  .for((${iterator} + 1));
 }
 .for();`
-            );
-          },
-          order: 0,
-        }, // export default (function (_, $, module) {
-        {
-          pattern: /(@function\s)|(@return)/gi,
-          replacement: function (match, func, rt) {
-            return func ? ".function-" : "return:";
-          },
-          order: 1,
-        },
-        //   return module.exports
-        // })()
+  	  },
+  	  order: 0
+  	};
+  	return _for;
+  }
 
-        {
-          pattern: /@if\s([()\w\s$=><!-]+)/gi,
-          replacement: function (match, g1) {
-            return "& when (" + g1.replace("==", "=").trim() + ") ";
-          },
-          order: 0.1,
-        },
-        {
-          pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
-          replacement: function (match, condition, ifBody) {
-            let newCondition = condition.replace("==", "=").trim();
-            let newIf = `& when (${newCondition}) `;
-            let newElse = `\n& when not (${newCondition})`;
-            return newIf + ifBody.trim() + newElse;
-          },
-          order: 0,
-        },
-        {
-          pattern: /@import\s?['|"]([\w-_]+|[\w-_/]+\/|\.\.?\/)([^./]*?)['|"];/gi,
-          replacement: function (match, pathOrName, name) {
-            if (name) {
-              // we got a file referenced with a path but need to append '_' only to the filename
-              return (
-                '@import (optional) "' +
-                pathOrName +
-                name +
-                '.scss";\n@import (optional) "' +
-                pathOrName +
-                "_" +
-                name +
-                '.scss";'
-              );
-            }
-            return '@import (optional) "' + pathOrName + '.scss";\n@import (optional) "_' + pathOrName + '.scss";';
-          },
-          order: 2,
-        },
-        {
-          pattern: /@include\s([\w\-]+)/gi,
-          replacement: ".$1",
-          order: 2,
-        },
-        {
-          pattern: /@mixin\s([\w\-]*)(\(.*\))?\s?{/gi,
-          replacement: ".$1$2 {",
-          order: 2,
-        },
-        {
-          pattern: /adjust-hue\((.+),(.+)\)/gi,
-          replacement: "spin($1,$2)",
-          order: 3,
-        },
-        {
-          pattern: /calc\(([^;]+)\)/gi,
-          replacement: function (match, calcBody) {
-            if (/\#{(?!\$)([^}]+)\}/gi.test(calcBody)) {
-              calcBody = calcBody
-                // match math operators that are not within interpolation and LESS-escape them
-                .replace(/[-+*\/][^#]+?}|([-+*\/])/gi, function (hit, operator) {
-                  return operator ? '~"' + operator + '"' : hit;
-                })
-                // match sass interpolation and remove it as no equivalent in this form in LESS
-                .replace(/\#\{([^}]+)}/gi, "$1")
-                // replace $ with @ as usual
-                .replace(/\$/gi, "@");
+  var _function;
+  var hasRequired_function;
 
-              return "calc(" + calcBody + ")";
-            } else {
-              return 'calc(~"' + calcBody + '")';
-            }
-          },
-          order: 0,
-        },
-        {
-          pattern: /\s?\!default/gi,
-          replacement: "",
-          order: 3,
-        },
-        {
-          pattern: /\((.*)!important\)/gi,
-          replacement: function (match, g1) {
-            return "(" + g1.trim() + ") !important";
-          },
-          order: 3,
-        },
-        {
-          pattern: /\#{([^}]+)\}/gi,
-          replacement: function (match, contents) {
-            if (/\#{(?!\$)([^}]+)\}/gi.test(match)) {
-              match = match
-                // match string concatenation (+ "xy") that is valid within interpolation in SASS but not LESS
-                .replace(/\+\s?"/gi, '~"')
-                // match sass interpolation and remove it as no equivalent in this form in LESS
-                .replace(/\#\{([^}]+)}/gi, "$1")
-                // replace $ with @ as usual
-                .replace(/\$/gi, "@");
-              return match;
-            } else {
-              return "@{" + contents.replace(/\$/gi, "") + "}";
-            }
-          },
-          order: 0,
-        },
-        {
-          pattern: /nth\(/gi,
-          replacement: "extract(",
-          order: 1,
-        },
-        {
-          pattern: /rgba\(((?:#|\$)[^,$]+),\s?([^,)]+)\)/gi,
-          replacement: "fade($1, ($2*100))",
-          order: 0,
-        },
-        {
-          pattern: /unquote\("(.*)"\)/gi,
-          replacement: '~"$1"',
-          order: 3,
-        },
-        {
-          pattern: /\$/gi,
-          replacement: "@",
-          order: 1,
-        },
-      ];
+  function require_function () {
+  	if (hasRequired_function) return _function;
+  	hasRequired_function = 1;
+  	// export default (function (_, $, module) {
+  	  _function = {
+  	    pattern: /(@function\s)|(@return)/gi,
+  	    replacement: function (match, func, rt) {
+  	      return func ? '.function-' : 'return:'
+  	    },
+  	    order: 1
+  	  };
+  	//   return module.exports
+  	// })()
+  	return _function;
+  }
+
+  var _if;
+  var hasRequired_if;
+
+  function require_if () {
+  	if (hasRequired_if) return _if;
+  	hasRequired_if = 1;
+  	_if = {
+  	  pattern: /@if\s([()\w\s$=><!-]+)/gi,
+  	  replacement: function(match, g1) {
+  	    return '& when (' + g1.replace('==', '=').trim() + ') '
+  	  },
+  	  order: 0.1
+  	};
+  	return _if;
+  }
+
+  var _ifelse;
+  var hasRequired_ifelse;
+
+  function require_ifelse () {
+  	if (hasRequired_ifelse) return _ifelse;
+  	hasRequired_ifelse = 1;
+  	_ifelse = {
+  	  pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
+  	  replacement: function(match, condition, ifBody) {
+  	    let newCondition = condition.replace('==', '=').trim();
+  	    let newIf = `& when (${newCondition}) `;
+  	    let newElse = `\n& when not (${newCondition})`;
+  	    return newIf + ifBody.trim() + newElse
+  	  },
+  	  order: 0
+  	};
+  	return _ifelse;
+  }
+
+  /*
+    Note that we have to deal with SASS partials (_file.scss) as well.
+    To make things easier we just tell less to look for underscored files as well and import them as reference.
+    In order for less not to throw errors, we make sass imports optional.
+    This might make debugging harder in some cases...
+    http://www.sass-lang.com/documentation/file.SASS_REFERENCE.html#partials
+  */
+
+  var _import;
+  var hasRequired_import;
+
+  function require_import () {
+  	if (hasRequired_import) return _import;
+  	hasRequired_import = 1;
+  	_import = {
+  	  pattern: /@import\s?['|"]([\w-_]+|[\w-_/]+\/|\.\.?\/)([^./]*?)['|"];/gi,
+  	  replacement: function (match, pathOrName, name) {
+  	    if (name) {
+  	      // we got a file referenced with a path but need to append '_' only to the filename
+  	      return '@import (optional) "' + pathOrName + name + '.scss";\n@import (optional) "' + pathOrName + '_' + name + '.scss";'
+  	    }
+  	    return '@import (optional) "' + pathOrName + '.scss";\n@import (optional) "_' + pathOrName + '.scss";'
+  	  },
+  	  order: 2
+  	};
+  	return _import;
+  }
+
+  var _include;
+  var hasRequired_include;
+
+  function require_include () {
+  	if (hasRequired_include) return _include;
+  	hasRequired_include = 1;
+  	_include = {
+  	  pattern: /@include\s([\w\-]+)/gi,
+  	  replacement: '.$1',
+  	  order: 2
+  	};
+  	return _include;
+  }
+
+  var _mixin;
+  var hasRequired_mixin;
+
+  function require_mixin () {
+  	if (hasRequired_mixin) return _mixin;
+  	hasRequired_mixin = 1;
+  	_mixin = {
+  	  pattern: /@mixin\s([\w\-]*)(\(.*\))?\s?{/gi,
+  	  replacement: '.$1$2 {',
+  	  order: 2
+  	};
+  	return _mixin;
+  }
+
+  var adjustHue;
+  var hasRequiredAdjustHue;
+
+  function requireAdjustHue () {
+  	if (hasRequiredAdjustHue) return adjustHue;
+  	hasRequiredAdjustHue = 1;
+  	adjustHue = {
+  	  pattern: /adjust-hue\((.+),(.+)\)/gi,
+  	  replacement: 'spin($1,$2)',
+  	  order: 3
+  	};
+  	return adjustHue;
+  }
+
+  /*
+    Due to the agressive default behaviour of LESS for calc(), we need to escape it when coming from sass
+    More on that here: http://stackoverflow.com/a/36214895/1071518
+    There are some pretty nasty sass interpolation features that are handled in cases where there is a match for them.
+  */
+
+  var calc;
+  var hasRequiredCalc;
+
+  function requireCalc () {
+  	if (hasRequiredCalc) return calc;
+  	hasRequiredCalc = 1;
+  	calc = {
+  	  pattern: /calc\(([^;]+)\)/gi,
+  	  replacement: function(match, calcBody) {
+  	    if (/\#{(?!\$)([^}]+)\}/gi.test(calcBody)) {
+  	      calcBody = calcBody
+  	        // match math operators that are not within interpolation and LESS-escape them
+  	        .replace(/[-+*\/][^#]+?}|([-+*\/])/gi, function(hit, operator) { return operator ? '~"' + operator + '"' : hit })
+  	        // match sass interpolation and remove it as no equivalent in this form in LESS
+  	        .replace(/\#\{([^}]+)}/gi, '$1')
+  	        // replace $ with @ as usual
+  	        .replace(/\$/gi, '@');
+
+  	      return 'calc(' + calcBody + ')'
+  	    } else {
+  	      return 'calc(~"' + calcBody + '")'
+  	    }
+  	  },
+  	  order: 0
+  	};
+  	return calc;
+  }
+
+  /*
+    The !default attribute is not needed in LESS, because of lazy loading.
+    Thus we just remove it. http://lesscss.org/features/#variables-feature-default-variables
+  */
+
+  var _default;
+  var hasRequired_default;
+
+  function require_default () {
+  	if (hasRequired_default) return _default;
+  	hasRequired_default = 1;
+  	_default = {
+  	  pattern: /\s?\!default/gi,
+  	  replacement: '',
+  	  order: 3
+  	};
+  	return _default;
+  }
+
+  var important;
+  var hasRequiredImportant;
+
+  function requireImportant () {
+  	if (hasRequiredImportant) return important;
+  	hasRequiredImportant = 1;
+  	important = {
+  	  pattern: /\((.*)!important\)/gi,
+  	  replacement: function (match, g1) {
+  	    return '(' + g1.trim() + ') !important'
+  	  },
+  	  order: 3
+  	};
+  	return important;
+  }
+
+  var interpolation;
+  var hasRequiredInterpolation;
+
+  function requireInterpolation () {
+  	if (hasRequiredInterpolation) return interpolation;
+  	hasRequiredInterpolation = 1;
+  	interpolation = {
+  	  pattern: /\#{([^}]+)\}/gi,
+  	  replacement: function(match, contents) {
+  	    if (/\#{(?!\$)([^}]+)\}/gi.test(match)) {
+  	      match = match
+  	        // match string concatenation (+ "xy") that is valid within interpolation in SASS but not LESS
+  	        .replace(/\+\s?"/gi, '~"')
+  	        // match sass interpolation and remove it as no equivalent in this form in LESS
+  	        .replace(/\#\{([^}]+)}/gi, '$1')
+  	        // replace $ with @ as usual
+  	        .replace(/\$/gi, '@');
+  	      return match
+  	    } else {
+  	      return '@{' + contents.replace(/\$/gi, '') + '}'
+  	    }
+  	  },
+  	  order: 0
+  	};
+  	return interpolation;
+  }
+
+  var nth;
+  var hasRequiredNth;
+
+  function requireNth () {
+  	if (hasRequiredNth) return nth;
+  	hasRequiredNth = 1;
+  	nth = {
+  	  pattern: /nth\(/gi,
+  	  replacement: 'extract(',
+  	  order: 1
+  	};
+  	return nth;
+  }
+
+  /*
+    SASS has an overload for rgba() that accepts a single color object instead of a comma delimited rgb value.
+    Less doesn't support this, so we need to convert those cases.
+
+    Less rgba(): http://lesscss.org/functions/#color-definition-rgba
+    Sass rgba(): http://sass-lang.com/documentation/Sass/Script/Functions.html#rgba-instance_method
+  */
+
+  var rgba;
+  var hasRequiredRgba;
+
+  function requireRgba () {
+  	if (hasRequiredRgba) return rgba;
+  	hasRequiredRgba = 1;
+  	rgba = {
+  	  pattern: /rgba\(((?:#|\$)[^,$]+),\s?([^,)]+)\)/gi,
+  	  replacement: 'fade($1, ($2*100))',
+  	  order: 0
+  	};
+  	return rgba;
+  }
+
+  var unquote;
+  var hasRequiredUnquote;
+
+  function requireUnquote () {
+  	if (hasRequiredUnquote) return unquote;
+  	hasRequiredUnquote = 1;
+  	unquote = {
+  	  pattern: /unquote\("(.*)"\)/gi,
+  	  replacement: '~"$1"',
+  	  order: 3
+  	};
+  	return unquote;
+  }
+
+  var variables;
+  var hasRequiredVariables;
+
+  function requireVariables () {
+  	if (hasRequiredVariables) return variables;
+  	hasRequiredVariables = 1;
+  	variables = {
+  	  pattern: /\$/gi,
+  	  replacement: '@',
+  	  order: 1
+  	};
+  	return variables;
+  }
+
+  var dynamicModules;
+
+  function getDynamicModules() {
+  	return dynamicModules || (dynamicModules = {
+  		"/lib/replacements/@extend.js": require_extend,
+  		"/lib/replacements/@for.js": require_for,
+  		"/lib/replacements/@function.js": require_function,
+  		"/lib/replacements/@if.js": require_if,
+  		"/lib/replacements/@ifelse.js": require_ifelse,
+  		"/lib/replacements/@import.js": require_import,
+  		"/lib/replacements/@include.js": require_include,
+  		"/lib/replacements/@mixin.js": require_mixin,
+  		"/lib/replacements/adjust-hue.js": requireAdjustHue,
+  		"/lib/replacements/calc.js": requireCalc,
+  		"/lib/replacements/default.js": require_default,
+  		"/lib/replacements/important.js": requireImportant,
+  		"/lib/replacements/interpolation.js": requireInterpolation,
+  		"/lib/replacements/nth.js": requireNth,
+  		"/lib/replacements/rgba.js": requireRgba,
+  		"/lib/replacements/unquote.js": requireUnquote,
+  		"/lib/replacements/variables.js": requireVariables
+  	});
+  }
+
+  function createCommonjsRequire(originalModuleDir) {
+  	function handleRequire(path) {
+  		var resolvedPath = commonjsResolve(path, originalModuleDir);
+  		if (resolvedPath !== null) {
+  			return getDynamicModules()[resolvedPath]();
+  		}
+  		throw new Error('Could not dynamically require "' + path + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
+  	}
+  	handleRequire.resolve = function (path) {
+  		var resolvedPath = commonjsResolve(path, originalModuleDir);
+  		if (resolvedPath !== null) {
+  			return resolvedPath;
+  		}
+  		return require.resolve(path);
+  	};
+  	return handleRequire;
+  }
+
+  function commonjsResolve (path, originalModuleDir) {
+  	var shouldTryNodeModules = isPossibleNodeModulesPath(path);
+  	path = normalize(path);
+  	var relPath;
+  	if (path[0] === '/') {
+  		originalModuleDir = '';
+  	}
+  	var modules = getDynamicModules();
+  	var checkedExtensions = ['', '.js', '.json'];
+  	while (true) {
+  		if (!shouldTryNodeModules) {
+  			relPath = normalize(originalModuleDir + '/' + path);
+  		} else {
+  			relPath = normalize(originalModuleDir + '/node_modules/' + path);
+  		}
+
+  		if (relPath.endsWith('/..')) {
+  			break; // Travelled too far up, avoid infinite loop
+  		}
+
+  		for (var extensionIndex = 0; extensionIndex < checkedExtensions.length; extensionIndex++) {
+  			var resolvedPath = relPath + checkedExtensions[extensionIndex];
+  			if (modules[resolvedPath]) {
+  				return resolvedPath;
+  			}
+  		}
+  		if (!shouldTryNodeModules) break;
+  		var nextDir = normalize(originalModuleDir + '/..');
+  		if (nextDir === originalModuleDir) break;
+  		originalModuleDir = nextDir;
+  	}
+  	return null;
+  }
+
+  function isPossibleNodeModulesPath (modulePath) {
+  	var c0 = modulePath[0];
+  	if (c0 === '/' || c0 === '\\') return false;
+  	var c1 = modulePath[1], c2 = modulePath[2];
+  	if ((c0 === '.' && (!c1 || c1 === '/' || c1 === '\\')) ||
+  		(c0 === '.' && c1 === '.' && (!c2 || c2 === '/' || c2 === '\\'))) return false;
+  	if (c1 === ':' && (c2 === '/' || c2 === '\\')) return false;
+  	return true;
+  }
+
+  function normalize (path) {
+  	path = path.replace(/\\/g, '/');
+  	var parts = path.split('/');
+  	var slashed = parts[0] === '';
+  	for (var i = 1; i < parts.length; i++) {
+  		if (parts[i] === '.' || parts[i] === '') {
+  			parts.splice(i--, 1);
+  		}
+  	}
+  	for (var i = 1; i < parts.length; i++) {
+  		if (parts[i] !== '..') continue;
+  		if (i > 0 && parts[i - 1] !== '..' && parts[i - 1] !== '.') {
+  			parts.splice(--i, 2);
+  			i--;
+  		}
+  	}
+  	path = parts.join('/');
+  	if (slashed && path[0] !== '/') path = '/' + path;
+  	else if (path.length === 0) path = '.';
+  	return path;
+  }
+
+  let sassToLess = function() {};
+
+
+  let replacements = function () {
+
+
+    let results = (function() {
+        
+      /** MACRO `let fs = require('fs'), require, __dirname` */
+      
+        let fs = require$$0;
+        let dir = __dirname + '/replacements/';
+
+        let filenames = fs.readdirSync(dir);
+
+        /**
+         * @type {Array<{order: number, replacement: Function, pattern: RegExp}>}
+         */
+        return filenames.map(function (filename) {
+          return createCommonjsRequire("/lib")(dir + filename)
+        })
+      
+      /** END_MACRO */
+
     })();
+    
 
-    return results.sort((ex1, ex2) => ex1.order - ex2.order);
+    return results.sort((ex1, ex2) => ex1.order - ex2.order)
   };
 
   replacements();
 
+
   sassToLess.prototype = {
-    process: function (src, extra) {
+    process: function(src, extra) {
       // skip if it's not a sass/scss file
       if (extra.fileInfo && !/\.s[a|c]ss/i.test(extra.fileInfo.filename)) {
-        return src;
+        return src
       }
 
       // process file
-      return [src].concat(replacements()).reduce(function (source, item) {
-        return source.replace(item.pattern, item.replacement);
-      });
-    },
+      return [src].concat(replacements()).reduce(function(source, item) {
+        return source.replace(item.pattern, item.replacement)
+      })
+    }
   };
 
   var lib = sassToLess;
 
   return lib;
 
-})();
+})(require$$0);
