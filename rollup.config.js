@@ -40,9 +40,11 @@ const buildOptions =  {
             prettify: true,
             comments: false,
             externalPackages: { path, fs },
-            onReplace: elems => 'return ' + (
-                Array.isArray(elems) ? `[${elems.map(w => "'" + w + "'")}]` : (elems + '')
-            ),
+            //@ts-ignore
+            onReplace: ar => `return [${ar.map(w => "'" + w + "'")}]`,
+            // onReplace: elems => 'return ' + (
+            //     Array.isArray(elems) ? `[${elems.map(w => "'" + w + "'")}]` : (elems + '')
+            // ),
             macroses: {
                 'fs.readdirSync': (function (_path) {
                     //@ts-ignore
@@ -50,9 +52,8 @@ const buildOptions =  {
                     let filenames = fs.readdirSync(dir + _path)
                     
                     return filenames
-                    // return '[' + filenames.map(w => "'" + w + "'").toString() + ']'
                 }).toString(),
-                '__dirname +': '',  // `${path.dirname(path.relative(process.cwd(), file))}`
+                '__dirname +': '', 
             }
         }),
         resolve({
