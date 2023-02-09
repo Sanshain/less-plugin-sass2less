@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Test",
+            "program": "${workspaceFolder}/test.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node"
+        },
+        {
             "name": "Rollup",
             "program": "${workspaceFolder}\\rollup.config.js",
             "request": "launch",

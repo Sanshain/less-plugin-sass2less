@@ -53,13 +53,22 @@ describe('SCSS to LESS converter', function() {
   }
 
   // locals
-  fixtures = fs.readdirSync(path.resolve(__dirname, './fixtures'))
+  // fixtures = fs.readdirSync(path.resolve(__dirname, './fixtures'))
+  globalThis.f = fs.readdirSync('./spec/fixtures', { withFileTypes: true })
 
   // create instances
   converter = new Converter()
 
   fixtures.map(function (file) {
-    let filename = getName(file)
-    runTest(filename, path.resolve(__dirname, './fixtures', file), path.resolve(__dirname, './expected', filename + '.less'))
+    
+    let filename = getName(file.name)
+    let type = file[Object.getOwnPropertySymbols(file)[0]];
+
+    if (type === 1) {
+      runTest(filename, path.resolve(__dirname, './fixtures', file), path.resolve(__dirname, './expected', filename + '.less'))
+    }
+    else if (type === 2){
+      // is directory
+    }
   })
 })

@@ -2,14 +2,15 @@
   "name": "less-plugin-sass2less",
   "version": "1.2.0",
   "description": "A plugin for less that converts SASS files into LESS. It comes with a cmd utility too.",
-  "main": "lib/plugin.js",
+  "main": "lib/index.js",
   "type": "module",
   "bin": {
     "sass2less": "./bin/cmd.js"
   },
   "scripts": {
     "test": "istanbul cover node_modules/jasmine/bin/jasmine.js",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "types": "tsc ./lib/index.js --allowJs -d --emitDeclarationOnly  --outDir types"
   },
   "author": "mediafreakch",
   "dependencies": {
@@ -21,13 +22,16 @@
   },
   "devDependencies": {
     "@rollup/pluginutils": "^5.0.2",
+    "i": "^0.3.7",
     "istanbul": "^0.4.5",
     "jasmine": "^2.5.2",
     "jasmine-spec-reporter": "^2.7.0",
     "magic-string": "^0.27.0",
+    "npm": "^9.4.2",
     "prettier": "^2.8.4",
     "rollup": "^3.14.0",
     "rollup-plugin-ast-macros": "^0.8.0",
+    "rollup-plugin-uglify": "^6.0.4",
     "uglify-js": "^3.17.4"
   },
   "peerDependencies": {

@@ -1,4 +1,4 @@
-var toLESS = (function () {
+var LessCompiler = (function () {
   'use strict';
 
   let sassToLess = function () {};
@@ -164,8 +164,6 @@ var toLESS = (function () {
 
     return results.sort((ex1, ex2) => ex1.order - ex2.order);
   };
-
-  replacements();
 
   sassToLess.prototype = {
     process: function (src, extra) {

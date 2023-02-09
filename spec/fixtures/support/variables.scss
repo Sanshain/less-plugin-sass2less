@@ -1,0 +1,12 @@
+// @mixin
+// @include
+// @extend
+// @debug(something);
+
+// Convert Less variables
+$color: '#000';
+$word: 'word';
+$camelCase: 'camelCase';
+$kebab-case: 'kebab-case';
+$snake_case: 'snake_case';
+$complex: unquote("rgba(#{$color}, 0.87)") !default;
