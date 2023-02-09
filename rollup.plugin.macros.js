@@ -17,7 +17,8 @@ import prettier from "prettier";
  *      macroses?: {[k: string]: string | MacrosDetails},
  *      prettify?: boolean,
  *      comments?: false,
- *      externalPackages?: Packages
+ *      externalPackages?: Packages,
+ *      onReplace?: (s: unknown) => string
  * }} options 
  * @returns {{name: string, transform: Function}}
  */
@@ -51,6 +52,8 @@ export function calculableMacros(options = {}) {
             let externalPackages = options.externalPackages;
             let source = new MagicString(code)
 
+            const self = this;
+
             //@ts-ignore
             source.replaceAll(/\/\*\* MACRO `([\w,_ \(\)\="'\.\+]+)` \*\/([\s\S]+)\/\*\* END_MACRO \*\//g, function (block, names, content) {
                 console.log(file);
@@ -82,8 +85,6 @@ export function calculableMacros(options = {}) {
                     }
                 });
 
-                const self = this;
-
                 const commonjsPackages = Object.entries(externalPackages).map(function ([key, value], i) {
                     /**
                      * @type {[string, {default: object}]}
@@ -97,14 +98,24 @@ export function calculableMacros(options = {}) {
                     return r;
                 }).reduce((acc, [k, v]) => (acc[k] = v, acc), {})
 
-                if (~content.indexOf('`')) {
-                    console.warn('Be carefull. Using "`" symbol inside macros script could raise an error');
-                }
+                // if (~content.indexOf('`')) {
+                //     console.warn('Warnings! Be carefull. Using "`" symbol inside macros script could raise an error');
+                // }
 
                 // let eval2 = new Function(`{file, path, fs, fs__default}`, `return eval((() => {${content}})())`)
-                let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval(\`(() => {
+
+                // Issues: 
+                // could using `` templates if macroses returns {object} and not string
+                // else if => string => `` inside function its returned raise error 
+
+                let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval((() => {
                     ${content}
-                })()\`)`)
+                })())`)
+
+                // let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval(\`(() => {
+                //     ${content}
+                // })()\`)`)
+
                 // var eval2 = eval.bind(globalThis, `(() => {${content}})()`);
 
                 /**
@@ -113,14 +124,16 @@ export function calculableMacros(options = {}) {
                 let r = eval2({ file: file, ...externalPackages, ...commonjsPackages });
                 // let r = eval()`eval((() => {${content}})())`)
 
-                if (r === undefined) {
-                    throw new Error(`Result of macros execution is undefined. \nCheck macros content "${names}" in "${file}". Macro code must have "return" construction on end`);
-                }
-                else if (typeof r !== 'string') {
-                    self.warn('Warning: returned value from macro script is not a string');
-                }
+                // if (r === undefined) {
+                //     throw new Error(`Result of macros execution is undefined. \nCheck macros content "${names}" in "${file}". Macro code must have "return" construction on end`);
+                // }
+                // else
+                // if (typeof r !== 'string') {
+                //     //@ts-ignore
+                //     self.warn('Warning: returned value from macro script is not a string');
+                // }
 
-                return 'return ' + r
+                return options.onReplace ? options.onReplace(r) : 'return ' + r;
             })
 
             let generatedCode = source.toString()

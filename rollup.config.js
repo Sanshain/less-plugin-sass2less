@@ -39,14 +39,18 @@ const buildOptions =  {
         calculableMacros({
             prettify: true,
             comments: false,
-            externalPackages: {path, fs},            
+            externalPackages: { path, fs },
+            onReplace: elems => 'return ' + (
+                Array.isArray(elems) ? `[${elems.map(w => "'" + w + "'")}]` : (elems + '')
+            ),
             macroses: {
                 'fs.readdirSync': (function (_path) {
                     //@ts-ignore
                     let dir = path.dirname(path.relative(process.cwd(), file))
                     let filenames = fs.readdirSync(dir + _path)
                     
-                    return '[' + filenames.map(w => "'" + w + "'").toString() + ']'
+                    return filenames
+                    // return '[' + filenames.map(w => "'" + w + "'").toString() + ']'
                 }).toString(),
                 '__dirname +': '',  // `${path.dirname(path.relative(process.cwd(), file))}`
             }
