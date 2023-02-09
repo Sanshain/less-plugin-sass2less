@@ -11,7 +11,7 @@ import astMacros from "rollup-plugin-ast-macros";
 import fs from "fs";
 import path from 'path';
 
-import { calculableMacros } from './rollup.plugin.macros';
+import { calculableMacros } from './rollup.plugin.macros.js';
 
 
 
@@ -59,10 +59,11 @@ const buildOptions =  {
                     
                     // }
                     return flatCode
-                }).toString(),
+                }).toString(),                
                 __dirname: '`${path.dirname(path.relative(process.cwd(), file))}`',
                 "let fs = require('fs')": ''
-            }
+            },
+            onReplace: (v) => `return [${v}]`,
         }),
         resolve({
             browser: true
