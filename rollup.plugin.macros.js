@@ -98,10 +98,6 @@ export function calculableMacros(options = {}) {
                     return r;
                 }).reduce((acc, [k, v]) => (acc[k] = v, acc), {})
 
-                // if (~content.indexOf('`')) {
-                //     console.warn('Warnings! Be carefull. Using "`" symbol inside macros script could raise an error');
-                // }
-
                 // let eval2 = new Function(`{file, path, fs, fs__default}`, `return eval((() => {${content}})())`)
 
                 // Issues: 
@@ -112,26 +108,15 @@ export function calculableMacros(options = {}) {
                     ${content}
                 })())`)
 
-                // let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval(\`(() => {
-                //     ${content}
-                // })()\`)`)
-
-                // var eval2 = eval.bind(globalThis, `(() => {${content}})()`);
-
                 /**
                  * @type {Array<string>}
                  */
                 let r = eval2({ file: file, ...externalPackages, ...commonjsPackages });
-                // let r = eval()`eval((() => {${content}})())`)
+                
+                if (r === undefined) { // !~content.indexOf('return')
+                    throw new Error(`Result of macros execution is undefined. \nCheck macros content "${names}" in "${file}". Macro code must have "return" construction on end`);
+                }
 
-                // if (r === undefined) {
-                //     throw new Error(`Result of macros execution is undefined. \nCheck macros content "${names}" in "${file}". Macro code must have "return" construction on end`);
-                // }
-                // else
-                // if (typeof r !== 'string') {
-                //     //@ts-ignore
-                //     self.warn('Warning: returned value from macro script is not a string');
-                // }
 
                 return options.onReplace ? options.onReplace(r) : 'return ' + r;
             })
