@@ -52,13 +52,16 @@ export function calculableMacros(options = {}) {
             let source = new MagicString(code)
 
             //@ts-ignore
-            source.replaceAll(/\/\*\* MACRO `([\w,_ \(\)\="']+)` \*\/([\s\S]+)\/\*\* END_MACRO \*\//g, function (block, names, content) {
+            source.replaceAll(/\/\*\* MACRO `([\w,_ \(\)\="'\.\+]+)` \*\/([\s\S]+)\/\*\* END_MACRO \*\//g, function (block, names, content) {
                 console.log(file);
 
                 names.split(',').map(w => w.trim()).forEach(macro => {
                     if (options.macroses[macro] !== undefined) {
                         if (typeof options.macroses[macro] === 'string') {
-                            content = content.replace(new RegExp(macro.replace(/([\(\)])/g, '\\$1')), options.macroses[macro] ? '(' + options.macroses[macro] + ')' : '')
+                            // content = content.replace(new RegExp(macro.replace(/([\(\)\+])/g, '\\$1')), options.macroses[macro] ? '(' + options.macroses[macro] + ')' : '')
+                            content = content.replace(new RegExp(macro.replace(/([\(\)\+])/g, '\\$1')), options.macroses[macro]
+                                ? '(' + options.macroses[macro] + ')'
+                                : '')
                         }
                         else if (typeof options.macroses[macro] === 'object' && typeof options.macroses[macro]['value'] === 'string') {
 
@@ -79,6 +82,8 @@ export function calculableMacros(options = {}) {
                     }
                 });
 
+                const self = this;
+
                 const commonjsPackages = Object.entries(externalPackages).map(function ([key, value], i) {
                     /**
                      * @type {[string, {default: object}]}
@@ -92,17 +97,30 @@ export function calculableMacros(options = {}) {
                     return r;
                 }).reduce((acc, [k, v]) => (acc[k] = v, acc), {})
 
+                if (~content.indexOf('`')) {
+                    console.warn('Be carefull. Using "`" symbol inside macros script could raise an error');
+                }
+
                 // let eval2 = new Function(`{file, path, fs, fs__default}`, `return eval((() => {${content}})())`)
-                let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval((() => {${content}})())`)
+                let eval2 = new Function(`{file, ${Object.keys(externalPackages).concat(Object.keys(commonjsPackages))}}`, `return eval(\`(() => {
+                    ${content}
+                })()\`)`)
                 // var eval2 = eval.bind(globalThis, `(() => {${content}})()`);
 
                 /**
                  * @type {Array<string>}
                  */
-                let r = eval2({ file, ...externalPackages, ...commonjsPackages });
+                let r = eval2({ file: file, ...externalPackages, ...commonjsPackages });
                 // let r = eval()`eval((() => {${content}})())`)
 
-                return 'return [\n' + r.toString() + ']'
+                if (r === undefined) {
+                    throw new Error(`Result of macros execution is undefined. \nCheck macros content "${names}" in "${file}". Macro code must have "return" construction on end`);
+                }
+                else if (typeof r !== 'string') {
+                    self.warn('Warning: returned value from macro script is not a string');
+                }
+
+                return 'return ' + r
             })
 
             let generatedCode = source.toString()
@@ -113,7 +131,9 @@ export function calculableMacros(options = {}) {
 
             if (options.prettify) {
                 generatedCode = prettier.format(generatedCode, { parser: 'babel', tabWidth: 2, printWidth: 120 })
-                console.warn('Warning: prettify option could break source maps');
+                // console.log(this);
+                //@ts-ignore
+                this.warn('Warning: prettify option could break source maps');
                 // let c = minify(generatedCode, {compress: false, output: {comments: false}})
             }
 

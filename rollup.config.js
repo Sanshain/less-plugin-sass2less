@@ -36,36 +36,21 @@ const buildOptions =  {
     },
     plugins: [
         // astMacros(),
-        // calculableMacros({
-        //     prettify: true,
-        //     comments: false,
-        //     externalPackages: {path, fs},            
-        //     macroses: {
-        //         require: (function (_path) {
-        //             let code = fs.readFileSync(_path).toString()
-        //             console.log(_path);
-        //             // try {
-        //             //     var obj = eval(code)
-        //             // }
-        //             // catch (er){
+        calculableMacros({
+            prettify: true,
+            comments: false,
+            externalPackages: {path, fs},            
+            macroses: {
+                'fs.readdirSync': (function (_path) {
+                    //@ts-ignore
+                    let dir = path.dirname(path.relative(process.cwd(), file))
+                    let filenames = fs.readdirSync(dir + _path)
                     
-        //             // let esCode = `export default (function (_, $, module) {\n\n${code}\n\nreturn module.exports\n})()`
-
-        //             let flatCode = code.replace('module.exports = ', '')
-        //             // console.log(flatCode);
-        //             let hasCLosingComma = flatCode.trim().slice(-1) === ';'
-        //             if (hasCLosingComma) {
-        //                 flatCode = flatCode.trim().slice(0, -1)
-        //             }
-        //             // var obj = eval('(' + flatCode + ')');
-                    
-        //             // }
-        //             return flatCode
-        //         }).toString(),
-        //         __dirname: '`${path.dirname(path.relative(process.cwd(), file))}`',
-        //         "let fs = require('fs')": ''
-        //     }
-        // }),
+                    return '[' + filenames.map(w => "'" + w + "'").toString() + ']'
+                }).toString(),
+                '__dirname +': '',  // `${path.dirname(path.relative(process.cwd(), file))}`
+            }
+        }),
         resolve({
             browser: true
         }),
