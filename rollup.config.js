@@ -38,6 +38,7 @@ const buildOptions =  {
         calculableMacros({
             prettify: true,
             comments: false,
+            verbose: true,
             externalPackages: {path, fs},            
             macroses: {
                 import: (function (_path) {
