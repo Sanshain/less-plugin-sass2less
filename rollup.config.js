@@ -32,6 +32,11 @@ const buildOptions =  {
             format: 'es',
             name: "LessCompiler",
         },
+        {
+            file: './build/sass2less.cjs',
+            format: 'cjs',
+            name: "LessCompiler",
+        },
     ],
     plugins: [
         // astMacros(),
