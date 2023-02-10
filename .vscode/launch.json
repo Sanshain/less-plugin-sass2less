@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Test",
-            "program": "${workspaceFolder}/test.js",
+            "program": "${workspaceFolder}/main.spec.js",
             "request": "launch",
             "skipFiles": [
                 "<node_internals>/**"
@@ -25,7 +25,7 @@
         {
             "type": "pwa-node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Plugin",
             "skipFiles": [
                 "<node_internals>/**"
             ],
