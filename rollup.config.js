@@ -20,7 +20,7 @@ import { calculableMacros } from './rollup.plugin.macros.js';
 
 const buildOptions =  {
     input: './lib/index.js',
-    // input: './source/app.ts',
+    // input: './lib/plugin.js',
     output: [
         {
             file: './build/sass2less.js',
@@ -78,11 +78,32 @@ const buildOptions =  {
     ]
 };
 
+
+
+
+
+const pluginBuildOptions = {
+    ...buildOptions,
+    input: './lib/plugin.js',
+    output: buildOptions.output.map(_output => {
+        _output.file = _output.file.replace('/build/', '/build/plugin/')
+        return _output
+    })
+}
+
+const sassBuildOptions = {
+    ...buildOptions,
+    input: './lib/plugin.js',
+    output: { ...buildOptions.output[0], file: './build/sass.js' }
+}
+
+
 if (!~process.argv.indexOf('-c')) {
+
     import("rollup").then(function({rollup}) {
         
         //@ts-ignore
-        rollup(buildOptions).then(bundle => {
+        rollup(sassBuildOptions).then(bundle => {
             // console.log(bundle);
             if (Array.isArray(buildOptions.output)) buildOptions.output.forEach(_output => {
                 
