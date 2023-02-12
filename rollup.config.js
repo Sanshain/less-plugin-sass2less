@@ -93,17 +93,19 @@ const pluginBuildOptions = {
 
 const sassBuildOptions = {
     ...buildOptions,
-    input: './lib/plugin.js',
+    input: './lib/sass.js',
     output: { ...buildOptions.output[0], file: './build/sass.js' }
 }
 
 
 if (!~process.argv.indexOf('-c')) {
 
+    let buildOptions = sassBuildOptions;
+
     import("rollup").then(function({rollup}) {
         
         //@ts-ignore
-        rollup(sassBuildOptions).then(bundle => {
+        rollup(buildOptions).then(bundle => {
             // console.log(bundle);
             if (Array.isArray(buildOptions.output)) buildOptions.output.forEach(_output => {
                 
