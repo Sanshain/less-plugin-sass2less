@@ -82,14 +82,14 @@ const buildOptions =  {
 
 
 
-const pluginBuildOptions = {
-    ...buildOptions,
-    input: './lib/plugin.js',
-    output: buildOptions.output.map(_output => {
-        _output.file = _output.file.replace('/build/', '/build/plugin/')
-        return _output
-    })
-}
+// const pluginBuildOptions = {
+//     ...buildOptions,
+//     input: './lib/plugin.js',
+//     output: buildOptions.output.map(_output => {
+//         _output.file = _output.file.replace('/build/', '/build/plugin/')
+//         return _output
+//     })
+// }
 
 const sassBuildOptions = {
     ...buildOptions,

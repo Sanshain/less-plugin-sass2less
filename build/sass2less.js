@@ -44,11 +44,12 @@ var LessCompiler = (function () {
           order: 0.1,
         },
         {
-          pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
-          replacement: function (match, condition, ifBody) {
+          // pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
+          pattern: /@if\s([()\w\s$=><!-]+)([^]+?)([ \t]*)@else/gi,
+          replacement: function (match, condition, ifBody, indentation) {
             let newCondition = condition.replace("==", "=").trim();
             let newIf = `& when (${newCondition}) `;
-            let newElse = `\n& when not (${newCondition})`;
+            let newElse = `\n${indentation}& when not (${newCondition})`;
             return newIf + ifBody.trim() + newElse;
           },
           order: 0,
@@ -82,6 +83,18 @@ var LessCompiler = (function () {
           pattern: /@mixin\s([\w\-]*)(\(.*\))?\s?{/gi,
           replacement: ".$1$2 {",
           order: 2,
+        },
+        {
+          pattern: /\n@while\s([()\w\s=><!-]*(\$\w+)[()\w\s=><!-]*)\s*\{([^]*)\n\}/gi,
+          replacement: function (match, condition, variable, body) {
+            body = body.replace(new RegExp("\\" + variable + "\\s*:\\s*([^;\\n]+?)[;\\n]"), (_, assertion) => {
+              return ".while(" + assertion + ")";
+            });
+            return (
+              "\n.while (" + variable + ") when (" + condition.trim() + ") {" + body + "\n}\n\n.mixin(" + variable + ")"
+            );
+          },
+          order: 0,
         },
         {
           pattern: /adjust-hue\((.+),(.+)\)/gi,

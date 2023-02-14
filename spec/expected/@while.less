@@ -1,0 +1,9 @@
+.mixin(@n) when (@n > 0) {
+    .text-@{n} {
+        z-index: @n;
+    }
+
+    .mixin(@n - 1);
+}
+
+.mixin(3);
