@@ -6,19 +6,46 @@ var LessCompiler = (function () {
   let replacements = function () {
     let results = (function () {
       return [
-        ,
-        // {
-        //     pattern: /\n@while\s([()\w\s=><!-]*(\$\w+)[()\w\s=><!-]*)\s*\{([^]*)\n\}/gi,
-        //     replacement: function (_match, condition, variable, body, _pos, _full_text) {
+        {
+          // only for root @each
+          pattern: /^@each\s+(\$[\w-_]+)(,\s*\$[\w-_]+)?\s+in\s+(\$[\w-_]+)\s*\{([^]*)\n\}/gm,
+          replacement: function (_match, key, value, dictName, body, _, originext) {
+            const indent = " ".repeat(4);
 
-        //         body = body.replace(new RegExp('\\' + variable + '\\s*:\\s*([^;\\n]+?)[;\\n]'), (_, assertion) => {
-        //             return '.while(' + assertion + ')';
-        //         })
-        //         return '\n.while (' + variable + ') when (' + condition.trim() + ') {' + body + '\n}\n\n.mixin(' + variable + ')'
-        //     },
-        //     order: 0
-        // }
-        // TODO: mimic LESS's &:extend(x all)
+            if (!value) var extracts = "@" + key + ": extract(@" + dictName + ", @i);\n" + indent;
+            else if (value) {
+              value = value.split("$").pop();
+              var extracts =
+                "@item: extract(@" +
+                dictName +
+                ", @i);\n" +
+                indent +
+                key +
+                ": extract(@item, 1);\n" +
+                indent +
+                "@" +
+                value +
+                ": extract(@item, 2);\n" +
+                indent;
+            }
+
+            return (
+              ".loop(@i) when (@i > 0) {\n" +
+              indent +
+              extracts +
+              body +
+              "\n\n" +
+              indent +
+              ".loop(" +
+              dictName +
+              " - 1)\n}\n\n" +
+              ".loop(length(" +
+              dictName +
+              "))"
+            );
+          },
+          order: 0,
+        }, // TODO: mimic LESS's &:extend(x all)
         {
           pattern: /@extend\s\.([a-zA-Z-_]*)/gi,
           replacement: "&:extend(.$1)",
