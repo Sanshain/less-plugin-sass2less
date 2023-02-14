@@ -1,10 +1,13 @@
 // https: //stackoverflow.com/a/30209802/11815953
 
+// $color_collection: ('red', 'orange', 'green', 'blue');
+// $color: nth($color_collection, 1);
+
+
 $icons: ("eye": "\f112", "start": "\f12e", "stop": "\f12f");
 
 @each $name, $glyph in $icons {
     .icon-#{$name}:before {
-        display    : inline-block;
         font-family: "Icon Font";
         content    : $glyph;
     }

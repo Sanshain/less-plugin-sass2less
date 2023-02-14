@@ -1,0 +1,24 @@
+// TODO:
+// @colors: blue, green, yellow, red;
+// DONE:
+// extract(@colors, 1)
+
+// TODO:
+@icons: "eye" "\f112", "start" "\f12e", "stop" "\f12f";
+
+.loop(@index) when (@index > 0) {
+    @page-icon: extract(@icons, @index); //extract based on comma separator each page-icon combo
+    @name: extract(@page-icon, 1); //first part of the extracted value is the page type
+    @glyph: extract(@page-icon, 2); //second part is the icon
+
+    .page-type_@{name} {
+        font-family: "Icon Font";
+        content: @glyph;
+    }
+
+    .loop(@index - 1);
+}
+
+.loop(length(@icons)); //pass the length as counter (split based on comma)
+
+// https: //stackoverflow.com/questions/30207980/less-associative-array-in-loop

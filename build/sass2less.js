@@ -6,6 +6,18 @@ var LessCompiler = (function () {
   let replacements = function () {
     let results = (function () {
       return [
+        ,
+        // {
+        //     pattern: /\n@while\s([()\w\s=><!-]*(\$\w+)[()\w\s=><!-]*)\s*\{([^]*)\n\}/gi,
+        //     replacement: function (_match, condition, variable, body, _pos, _full_text) {
+
+        //         body = body.replace(new RegExp('\\' + variable + '\\s*:\\s*([^;\\n]+?)[;\\n]'), (_, assertion) => {
+        //             return '.while(' + assertion + ')';
+        //         })
+        //         return '\n.while (' + variable + ') when (' + condition.trim() + ') {' + body + '\n}\n\n.mixin(' + variable + ')'
+        //     },
+        //     order: 0
+        // }
         // TODO: mimic LESS's &:extend(x all)
         {
           pattern: /@extend\s\.([a-zA-Z-_]*)/gi,
@@ -87,6 +99,7 @@ var LessCompiler = (function () {
         {
           pattern: /\n@while\s([()\w\s=><!-]*(\$\w+)[()\w\s=><!-]*)\s*\{([^]*)\n\}/gi,
           replacement: function (match, condition, variable, body) {
+            console.log(arguments);
             body = body.replace(new RegExp("\\" + variable + "\\s*:\\s*([^;\\n]+?)[;\\n]"), (_, assertion) => {
               return ".while(" + assertion + ")";
             });
@@ -126,6 +139,15 @@ var LessCompiler = (function () {
           pattern: /\s?\!default/gi,
           replacement: "",
           order: 3,
+        },
+        {
+          pattern: /\$([\w\d_-]+?)\s*\:\s*(\(\s*[\d\w\"\'"]+\s*\:[^]+?\));?$/gm,
+          replacement: function (match, name, body) {
+            body = body.slice(1, -1).trim().replace(/\:\s*/g, " ");
+
+            return "@" + name + ": " + body;
+          },
+          order: 0,
         },
         {
           pattern: /\((.*)!important\)/gi,
