@@ -2,7 +2,7 @@
   "name": "less-plugin-sass2less",
   "version": "1.2.0",
   "description": "A plugin for less that converts SASS files into LESS. It comes with a cmd utility too.",
-  "main": "lib/index.js",
+  "main": "./build/sass2less.es.js",
   "type": "module",
   "bin": {
     "sass2less": "./bin/cmd.js"

@@ -28,12 +28,12 @@ const buildOptions =  {
             name: "LessCompiler",
         },
         {
-            file: './build/sass2less.mjs',
+            file: './build/sass2less.es.js',
             format: 'es',
             name: "LessCompiler",
         },
         {
-            file: './build/sass2less.cjs',
+            file: './build/sass2less.cjs.js',
             format: 'cjs',
             name: "LessCompiler",
         },
