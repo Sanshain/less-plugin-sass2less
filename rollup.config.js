@@ -67,6 +67,7 @@ const buildOptions =  {
             browser: true
         }),
         commonjs(),
+        // uglify()
 
         // typescript({
         //     // module: 'CommonJS', 

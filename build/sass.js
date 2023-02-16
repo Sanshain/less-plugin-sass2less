@@ -6,7 +6,46 @@
   let replacements = function () {
     let results = (function () {
       return [
-        // TODO: mimic LESS's &:extend(x all)
+        {
+          // only for root @each
+          pattern: /^@each\s+(\$[\w-_]+)(,\s*\$[\w-_]+)?\s+in\s+(\$[\w-_]+)\s*\{([^]*)\n\}/gm,
+          replacement: function (_match, key, value, dictName, body, _, originext) {
+            const indent = " ".repeat(4);
+
+            if (!value) var extracts = "@" + key + ": extract(@" + dictName + ", @i);\n" + indent;
+            else if (value) {
+              value = value.split("$").pop();
+              var extracts =
+                "@item: extract(@" +
+                dictName +
+                ", @i);\n" +
+                indent +
+                key +
+                ": extract(@item, 1);\n" +
+                indent +
+                "@" +
+                value +
+                ": extract(@item, 2);\n" +
+                indent;
+            }
+
+            return (
+              ".loop(@i) when (@i > 0) {\n" +
+              indent +
+              extracts +
+              body +
+              "\n\n" +
+              indent +
+              ".loop(" +
+              dictName +
+              " - 1)\n}\n\n" +
+              ".loop(length(" +
+              dictName +
+              "))"
+            );
+          },
+          order: 0,
+        }, // TODO: mimic LESS's &:extend(x all)
         {
           pattern: /@extend\s\.([a-zA-Z-_]*)/gi,
           replacement: "&:extend(.$1)",
@@ -44,11 +83,12 @@
           order: 0.1,
         },
         {
-          pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
-          replacement: function (match, condition, ifBody) {
+          // pattern: /@if\s([()\w\s$=><!-]+)([^]+?)@else/gi,
+          pattern: /@if\s([()\w\s$=><!-]+)([^]+?)([ \t]*)@else/gi,
+          replacement: function (match, condition, ifBody, indentation) {
             let newCondition = condition.replace("==", "=").trim();
             let newIf = `& when (${newCondition}) `;
-            let newElse = `\n& when not (${newCondition})`;
+            let newElse = `\n${indentation}& when not (${newCondition})`;
             return newIf + ifBody.trim() + newElse;
           },
           order: 0,
@@ -84,6 +124,19 @@
           order: 2,
         },
         {
+          pattern: /\n@while\s([()\w\s=><!-]*(\$\w+)[()\w\s=><!-]*)\s*\{([^]*)\n\}/gi,
+          replacement: function (match, condition, variable, body) {
+            console.log(arguments);
+            body = body.replace(new RegExp("\\" + variable + "\\s*:\\s*([^;\\n]+?)[;\\n]"), (_, assertion) => {
+              return ".while(" + assertion + ")";
+            });
+            return (
+              "\n.while (" + variable + ") when (" + condition.trim() + ") {" + body + "\n}\n\n.mixin(" + variable + ")"
+            );
+          },
+          order: 0,
+        },
+        {
           pattern: /adjust-hue\((.+),(.+)\)/gi,
           replacement: "spin($1,$2)",
           order: 3,
@@ -113,6 +166,15 @@
           pattern: /\s?\!default/gi,
           replacement: "",
           order: 3,
+        },
+        {
+          pattern: /\$([\w\d_-]+?)\s*\:\s*(\(\s*[\d\w\"\'"]+\s*\:[^]+?\));?$/gm,
+          replacement: function (match, name, body) {
+            body = body.slice(1, -1).trim().replace(/\:\s*/g, " ");
+
+            return "@" + name + ": " + body;
+          },
+          order: 0,
         },
         {
           pattern: /\((.*)!important\)/gi,
@@ -218,7 +280,7 @@
 
   function uploadLessCompiler(modeSrc) {
     let script = document.createElement("script");
-    script.src = modeSrc || document.location.origin + "/static/js/preproc/less.js";
+    script.src = modeSrc || document.location.origin + "/static/js/preproc/less/less.min.js";
     document.head.appendChild(script);
   }
 
